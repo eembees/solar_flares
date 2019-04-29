@@ -7,24 +7,24 @@ import sklearn.model_selection
 from keras.layers import *
 from pathlib import Path
 
-from lstm_fcn.lstmfcn_model import get_model
-
+from lstm_fcn.lstmfcn_model import *
+from reading_data import load_npz_file
 
 if __name__ == "__main__":
     ROOTDIR = "/Users/mag/Google Drive/Colab Notebooks/solar_flares/"
     DATADIR = "input/npz"
     OUTDIR = "output"
-    DATANAME = "sim"
+    DATANAME = "lstm_fcn"
     TAG = "spatialdropout"
 
     TRAIN = True
     NEW_MODEL = True
 
-    EPOCHS = 100
+    EPOCHS = 2
     PERCENTAGE = 100
-    BATCH_SIZE = 128
+    BATCH_SIZE = 64
     CALLBACK_TIMEOUT = 15
-    N_TIMESTEPS = None  # Variable length
+    N_TIMESTEPS = 60  # Change if Variable length
     INCLUDE_E = True
     INCLUDE_S = True
     SCALER = sklearn.preprocessing.maxabs_scale
@@ -38,7 +38,12 @@ if __name__ == "__main__":
     datadir = rootdir.joinpath(DATADIR)
     outdir = rootdir.joinpath(OUTDIR)
 
-    X_train, X_test, y_train, y_test = data(include_E=INCLUDE_E, include_S=INCLUDE_S, scaler=SCALER, stationary = STATIONARY)
+    X, y = load_npz_file(datadir / 'fold1Training.npz')
+
+    y = keras.utils.to_categorical(y, num_classes=2)
+
+    X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
+        X, y)
 
     model = get_model(
         n_features=X_train.shape[-1],
@@ -54,7 +59,7 @@ if __name__ == "__main__":
         model_name = model_name.replace("best_model", TAG + "_best_model")
 
     if TRAIN:
-        callbacks = lib.ml.generate_callbacks(patience=CALLBACK_TIMEOUT, outdir=outdir, name=DATANAME)
+        callbacks = generate_callbacks(patience=CALLBACK_TIMEOUT, outdir=outdir, name=DATANAME)
         model.fit(
             x=X_train,
             y=y_train,
@@ -63,17 +68,17 @@ if __name__ == "__main__":
             batch_size=BATCH_SIZE,
             callbacks=callbacks,
         )
-        lib.plotting.plot_losses(logpath=outdir, outdir=outdir, name=DATANAME)
+        # lib.plotting.plot_losses(logpath=outdir, outdir=outdir, name=DATANAME)
 
         if GOOGLE_COLAB:
             print("Converted model from GPU to CPU-compatible")
             cpu_model = create_model(google_colab=False, n_features=X_train.shape[-1])
-            lib.ml.gpu_model_to_cpu(
+            gpu_model_to_cpu(
                 trained_gpu_model=model, untrained_cpu_model=cpu_model, outdir=outdir, modelname=model_name
             )
 
     print("Evaluating...")
     y_pred = model.predict(X_test)
-    lib.plotting.plot_confusion_matrices(
-        y_target=y_test, y_pred=y_pred, y_is_binary=False, targets_to_binary=[2, 3], outdir=outdir, name=DATANAME
+    plot_confusion_matrices(
+        y_target=y_test, y_pred=y_pred, y_is_binary=True, targets_to_binary=[2, 3], outdir=outdir, name=DATANAME
     )

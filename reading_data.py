@@ -1,10 +1,11 @@
 from pathlib import Path
 import ijson
-import numpy as np # linear algebra
-import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import numpy as np  # linear algebra
+import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 from json import JSONDecoder, JSONDecodeError  # for reading the JSON data files
 import re  # for regular expressions
 import os  # for os related operations
+
 
 def decode_obj(line, pos=0, decoder=JSONDecoder()):
     no_white_space_regex = re.compile(r'[^\s]')
@@ -32,6 +33,7 @@ def get_obj_with_last_n_val(line, n):
 
     return {'id': id, 'classType': class_label, 'values': data}
 
+
 def get_obj_with_all(line):
     obj = next(decode_obj(line))  # type:dict
     id = obj['id']
@@ -45,7 +47,7 @@ def get_obj_with_all(line):
     return {'id': id, 'classType': class_label, 'values': data}
 
 
-def read_json_data_to_df(file_path:Path):
+def read_json_data_to_df(file_path: Path):
     """
     Generates a dataframe by concatenating the last values of each
     multi-variate time series. This method is designed as an example
@@ -55,9 +57,8 @@ def read_json_data_to_df(file_path:Path):
     :return: the generated dataframe.
     """
 
-
     all_df, labels, ids = [], [], []
-    with open(file_path, 'r') as infile: # Open the file for reading
+    with open(file_path, 'r') as infile:  # Open the file for reading
         for line in infile:  # Each 'line' is one MVTS with its single label (0 or 1).
             obj = get_obj_with_all(line)
             all_df.append(obj['values'])
@@ -78,7 +79,8 @@ def read_json_data_to_df(file_path:Path):
     # df.to_csv(file_name + '_last_vals.csv', index=False)
     return df
 
-def read_json_data_to_arr(file_path:Path):
+
+def read_json_data_to_arr(file_path: Path):
     """
     Generates a dataframe by concatenating the last values of each
     multi-variate time series. This method is designed as an example
@@ -88,13 +90,15 @@ def read_json_data_to_arr(file_path:Path):
     :return: the generated dataframe.
     """
 
-
     all_df, labels, ids = [], [], []
-    with open(file_path, 'r') as infile: # Open the file for reading
+    with open(file_path, 'r') as infile:  # Open the file for reading
         for line in infile:  # Each 'line' is one MVTS with its single label (0 or 1).
             obj = get_obj_with_all(line)
             # if obj['id'] < 100:
-            all_df.append(obj['values'].values)
+            df = obj['values']
+            df = df.fillna(method='ffill')
+            df = df.fillna(method='bfill')
+            all_df.append(df.values)
             labels.append(obj['classType'])
             ids.append(obj['id'])
             # else:
@@ -107,23 +111,22 @@ def read_json_data_to_arr(file_path:Path):
     return all_df, labels, ids
 
 
-def save_DF_to_NPZ(fp:Path, out_dir):
+def save_DF_to_NPZ(fp: Path, out_dir):
     fo = out_dir / fp.with_suffix('.npz').name
     # fo_k = Path(str(fo).replace(('.npz', '_keys.npz')))
     df = pd.read_json(fp, lines=True)
 
-    np.savez(fo, df=df, keys=df.keys, index = df.index)
+    np.savez(fo, df=df, keys=df.keys, index=df.index)
 
     pass
 
 
-
-def save_arr_to_npz(arr:np.ndarray,labels:np.ndarray, ids:np.ndarray, fo:Path):
-    np.savez(fo, data=arr, labels=labels, index = ids)
+def save_arr_to_npz(arr: np.ndarray, labels: np.ndarray, ids: np.ndarray, fo: Path):
+    np.savez(fo, data=arr, labels=labels, index=ids)
     pass
 
 
-def load_npz_file(path:Path):
+def load_npz_file(path: Path):
     a = np.load(path)
 
     X = a['data']
@@ -134,10 +137,10 @@ def load_npz_file(path:Path):
 
     return X, y
 
-def save_y_preds(y_index:np.ndarray, y_pred:np.ndarray, fo:Path)
+
+def save_y_preds(y_index: np.ndarray, y_pred: np.ndarray, fo: Path):
     np.savez(fo, index=y_index, labels=y_pred)
     pass
-
 
 
 if __name__ == '__main__':
@@ -146,7 +149,6 @@ if __name__ == '__main__':
 
     file_paths = list(data_dir.glob('*Training*.json'))
     # print(file_paths)
-
 
     for fp in file_paths:
         fo = out_dir / fp.with_suffix('.npz').name
