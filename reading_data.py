@@ -118,14 +118,25 @@ def save_DF_to_NPZ(fp:Path, out_dir):
 
 
 
-def save_arr_to_npz(arr:pd.DataFrame,labels:np.ndarray, ids:np.ndarray, fo:Path):
+def save_arr_to_npz(arr:np.ndarray,labels:np.ndarray, ids:np.ndarray, fo:Path):
     np.savez(fo, data=arr, labels=labels, index = ids)
+    pass
 
 
-def read_NPZ_to_DF(fp, fk):
-    npz_file = np.load(fp)
-    df_a = npz['df']
-    df_keys = npz['keys']
+def load_npz_file(path:Path):
+    a = np.load(path)
+
+    X = a['data']
+    try:
+        y = a['labels']
+    except KeyError:
+        y = None
+
+    return X, y
+
+def save_y_preds(y_index:np.ndarray, y_pred:np.ndarray, fo:Path)
+    np.savez(fo, index=y_index, labels=y_pred)
+    pass
 
 
 
@@ -138,8 +149,6 @@ if __name__ == '__main__':
 
 
     for fp in file_paths:
-        arr, labels, ids = read_json_data_to_arr(fp)
         fo = out_dir / fp.with_suffix('.npz').name
-        # print(fo)
         all_df, labels, ids = read_json_data_to_arr(fp)
         save_arr_to_npz(all_df, labels, ids, fo)
