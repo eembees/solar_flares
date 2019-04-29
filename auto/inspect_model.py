@@ -21,14 +21,11 @@ if __name__ == '__main__':
     # print('IMPORTED: TEST DATA')
     # print('X : {}, shape: {} '.format(type(X_test), X_test.shape))
     # print('y : {}, shape: {} '.format(type(y_test), y_test.shape))
-    #
-
 
     cls : AutoSklearnClassifier  = load( INPUT_PATH / 'auto_cls.joblib' )
 
     # predictions = cls.predict(X_test)
     # print("Accuracy score", accuracy_score(y_test, predictions))
-
 
     print(cls.get_models_with_weights())
 
