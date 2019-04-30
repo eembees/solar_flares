@@ -137,6 +137,8 @@ def load_npz_file(path: Path):
         y = a['labels']
     except KeyError:
         y = None
+    except ValueError:
+        y = None
 
     return X, y
 

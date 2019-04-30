@@ -38,13 +38,24 @@ if __name__ == "__main__":
     datadir = rootdir.joinpath(DATADIR)
     outdir = rootdir.joinpath(OUTDIR)
 
+    # X1, y1 = load_npz_file(datadir / 'fold1Training.npz')
+    # X2, y2 = load_npz_file(datadir / 'fold2Training.npz')
+    # X3, y3 = load_npz_file(datadir / 'fold3Training.npz')
+    #
+    # X = np.concatenate([X1, X2, X3])
+    # y = np.concatenate([y1, y2, y3])
+
+
     X, y = load_npz_file(datadir / 'fold1Training.npz')
+
+    X_pred, _ = load_npz_file(datadir / 'testSet.npz')
 
     y = keras.utils.to_categorical(y, num_classes=2)
 
     # preprocess x
 
     X = sklearn.preprocessing.StandardScaler().fit_transform(X.reshape((X.shape[0], X.shape[1]*X.shape[2]))).reshape(X.shape)
+    X_pred = sklearn.preprocessing.StandardScaler().fit_transform(X_pred.reshape((X_pred.shape[0], X_pred.shape[1]*X_pred.shape[2]))).reshape(X_pred.shape)
 
     # print(X.shape)
     # exit()
@@ -86,17 +97,18 @@ if __name__ == "__main__":
             )
 
     print("Evaluating...")
-    y_pred = model.predict(X_test)
-    for yp, yt in zip(np.argmax(y_pred, axis=1), np.argmax(y_test, axis=1)):
-        print('T:{} P:{}'.format(yt,yp))
+    y_pred = model.predict(X_pred)
 
 
-
-    plot_confusion_matrices(
-        y_target=np.argmax(y_test,axis=1), y_pred=np.argmax(y_pred,axis=1), y_is_binary=True, outdir=outdir, name=DATANAME
-    )
-
+    #
+    # for yp, yt in zip(np.argmax(y_pred, axis=1), np.argmax(y_test, axis=1)):
+    #     print('T:{} P:{}'.format(yt,yp))
+    #
+    # plot_confusion_matrices(
+    #     y_target=np.argmax(y_test,axis=1), y_pred=np.argmax(y_pred,axis=1), y_is_binary=True, outdir=outdir, name=DATANAME
+    # )
+    #
     ids = np.arange(1, len(y_pred) + 1, dtype=int)
 
     df = pd.DataFrame({'Id':ids,'ClassLabel':np.argmax(y_pred,axis=1)})
-    df.to_csv(outdir/'test.csv')
+    df.to_csv(outdir/'submission.csv')
