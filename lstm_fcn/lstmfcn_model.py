@@ -12,6 +12,8 @@ import mlxtend.evaluate
 import matplotlib.ticker
 from matplotlib import pyplot as plt
 import os.path
+from sklearn.preprocessing import StandardScaler
+
 
 GOOGLE_COLAB = "google.colab" in sys.modules
 if GOOGLE_COLAB:
@@ -128,17 +130,17 @@ def create_model(google_colab, n_features):
 
     y = Conv1D(filters=128, kernel_size=8, padding="same", kernel_initializer="he_uniform")(inputs)
     y = BatchNormalization()(y)
-    y = Activation("tanh")(y)
+    y = Activation("relu")(y)
     y = SpatialDropout1D(rate=0.3)(y)
 
     y = Conv1D(filters=256, kernel_size=5, padding="same", kernel_initializer="he_uniform")(y)
     y = BatchNormalization()(y)
-    y = Activation("tanh")(y)
+    y = Activation("relu")(y)
     y = SpatialDropout1D(rate=0.3)(y)
 
     y = Conv1D(filters=128, kernel_size=3, padding="same", kernel_initializer="he_uniform")(y)
     y = BatchNormalization()(y)
-    y = Activation("tanh")(y)
+    y = Activation("relu")(y)
     y = SpatialDropout1D(rate=0.3)(y)
 
     y = AveragePooling1D(1, padding="same")(y)
@@ -154,18 +156,17 @@ def create_model(google_colab, n_features):
     final = Concatenate()([x, y])
 
     # final = Lambda(lambda x: x / 0.5)(final)
-    # outputs = Dense(2, activation="softmax")(final)
-    outputs = Dense(2)(final)
+    outputs = Dense(2, activation="softmax")(final)
+    # outputs = Dense(2)(final)
 
     model = keras.models.Model(inputs=inputs, outputs=outputs)
     # optimizer = keras.optimizers.rmsprop(lr=1e-3)
     optimizer = 'adam'
     # model.compile(loss=f1_loss, optimizer=optimizer, metrics=["accuracy"])
     # model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
-    model.compile(loss="categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+    model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     return model
 
-# TODO redo preprocessing to see if it improves the nan loss situations
 
 # def create_model(google_colab, n_features):
 #     """Creates Keras model"""

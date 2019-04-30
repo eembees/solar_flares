@@ -6,7 +6,7 @@ import tensorflow as tf
 import sklearn.model_selection
 from keras.layers import *
 from pathlib import Path
-
+import pandas as pd
 from lstm_fcn.lstmfcn_model import *
 from reading_data import load_npz_file
 
@@ -20,9 +20,9 @@ if __name__ == "__main__":
     TRAIN = True
     NEW_MODEL = True
 
-    EPOCHS = 2
+    EPOCHS = 10
     PERCENTAGE = 100
-    BATCH_SIZE = 64
+    BATCH_SIZE = 128
     CALLBACK_TIMEOUT = 15
     N_TIMESTEPS = 60  # Change if Variable length
     INCLUDE_E = True
@@ -42,6 +42,14 @@ if __name__ == "__main__":
 
     y = keras.utils.to_categorical(y, num_classes=2)
 
+    # preprocess x
+
+    X = sklearn.preprocessing.StandardScaler().fit_transform(X.reshape((X.shape[0], X.shape[1]*X.shape[2]))).reshape(X.shape)
+
+    # print(X.shape)
+    # exit()
+
+    # TODO flatten and reshape before scaling
     X_train, X_test, y_train, y_test = sklearn.model_selection.train_test_split(
         X, y)
 
@@ -79,6 +87,16 @@ if __name__ == "__main__":
 
     print("Evaluating...")
     y_pred = model.predict(X_test)
+    for yp, yt in zip(np.argmax(y_pred, axis=1), np.argmax(y_test, axis=1)):
+        print('T:{} P:{}'.format(yt,yp))
+
+
+
     plot_confusion_matrices(
-        y_target=y_test, y_pred=y_pred, y_is_binary=True, targets_to_binary=[2, 3], outdir=outdir, name=DATANAME
+        y_target=np.argmax(y_test,axis=1), y_pred=np.argmax(y_pred,axis=1), y_is_binary=True, outdir=outdir, name=DATANAME
     )
+
+    ids = np.arange(1, len(y_pred) + 1, dtype=int)
+
+    df = pd.DataFrame({'Id':ids,'ClassLabel':np.argmax(y_pred,axis=1)})
+    df.to_csv(outdir/'test.csv')

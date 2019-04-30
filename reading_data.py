@@ -37,7 +37,10 @@ def get_obj_with_last_n_val(line, n):
 def get_obj_with_all(line):
     obj = next(decode_obj(line))  # type:dict
     id = obj['id']
-    class_label = obj['classNum']
+    try:
+        class_label = obj['classNum']
+    except KeyError:
+        class_label = None
 
     data = pd.DataFrame.from_dict(obj['values'])  # type:pd.DataFrame
     data.set_index(data.index.astype(int), inplace=True)
@@ -147,7 +150,7 @@ if __name__ == '__main__':
     data_dir = Path('./input')
     out_dir = data_dir / 'npz'
 
-    file_paths = list(data_dir.glob('*Training*.json'))
+    file_paths = list(data_dir.glob('*test*.json'))
     # print(file_paths)
 
     for fp in file_paths:
