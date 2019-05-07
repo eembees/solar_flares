@@ -102,3 +102,11 @@ venv.bak/
 
 # mypy
 .mypy_cache/
+
+# data directory
+data/
+input/
+output/
+
+# mac shit
+.DS_Store
