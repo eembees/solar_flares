@@ -165,7 +165,12 @@ def create_model(google_colab, n_features):
     y = Activation("relu")(y)
     y = SpatialDropout1D(rate=0.3)(y)
 
-    y = Conv1D(filters=128, kernel_size=3, padding="same", kernel_initializer="he_uniform")(y)
+    y = Conv1D(filters=256, kernel_size=3, padding="same", kernel_initializer="he_uniform")(y)
+    y = BatchNormalization()(y)
+    y = Activation("relu")(y)
+    y = SpatialDropout1D(rate=0.3)(y)
+
+    y = Conv1D(filters=128, kernel_size=8, padding="same", kernel_initializer="he_uniform")(y)
     y = BatchNormalization()(y)
     y = Activation("relu")(y)
     y = SpatialDropout1D(rate=0.3)(y)
@@ -177,6 +182,7 @@ def create_model(google_colab, n_features):
     y = Dropout(0.4)(y)
 
     x = AveragePooling1D(strides=1, padding="same")(inputs)
+    x = Bidirectional(LSTM_(8, return_sequences=True))(x)
     x = Bidirectional(LSTM_(8, return_sequences=False))(x)
     x = Dropout(0.4)(x)
 
