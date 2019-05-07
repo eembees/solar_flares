@@ -13,11 +13,11 @@ import matplotlib.ticker
 from matplotlib import pyplot as plt
 import os.path
 from sklearn.preprocessing import StandardScaler
-
+from send2trash import send2trash
 
 GOOGLE_COLAB = "google.colab" in sys.modules
 if GOOGLE_COLAB:
-    sys.path.append("./gdrive/My Drive/Colab Notebooks/FRETML")
+    sys.path.append("./gdrive/My Drive/Colab Notebooks/solar_flares")
     plt.style.use("default")
     config = tf.ConfigProto(device_count={"GPU": 1})
     keras.backend.set_session(tf.Session(config=config))
@@ -119,6 +119,8 @@ def gpu_model_to_cpu(trained_gpu_model, untrained_cpu_model, outdir, modelname):
     try:
         send2trash(weights)
     except OSError:
+        warn("Didn't trash file (probably because of Google Drive)", RuntimeWarning)
+    except NameError:
         warn("Didn't trash file (probably because of Google Drive)", RuntimeWarning)
 
 
