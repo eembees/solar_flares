@@ -101,6 +101,8 @@ def read_json_data_to_arr(file_path: Path):
             df = obj['values']
             df = df.fillna(method='ffill')
             df = df.fillna(method='bfill')
+            df = df.fillna(0.0) # after padding, give up
+
             all_df.append(df.values)
             labels.append(obj['classType'])
             ids.append(obj['id'])
@@ -152,8 +154,8 @@ if __name__ == '__main__':
     data_dir = Path('./input')
     out_dir = data_dir / 'npz'
 
-    file_paths = list(data_dir.glob('*test*.json'))
-    # print(file_paths)
+    file_paths = list(data_dir.glob('*2*.json'))
+    print(file_paths)
 
     for fp in file_paths:
         fo = out_dir / fp.with_suffix('.npz').name
