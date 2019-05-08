@@ -215,7 +215,7 @@ def create_model(google_colab, n_features):
     x = Activation("relu")(x)
     x = AveragePooling1D(1, padding="same")(x)
 
-    x = Bidirectional(LSTM_(32, return_sequences=True))(x)
+    x = Bidirectional(LSTM_(32, return_sequences=False))(x)
     final = Dropout(0.4)(x)
 
     outputs = Dense(2, activation="softmax")(final)
