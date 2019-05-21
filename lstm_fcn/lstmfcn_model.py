@@ -195,19 +195,19 @@ def create_model(google_colab, n_features):
     x = Activation("relu")(x)
 
     # residual net part
-    x = ResidualConv1D(filters=32, pool=True, spatial_dropout=True)(x)
+    x = ResidualConv1D(filters=32, pool=True, spatial_dropout=0.3)(x)
     x = ResidualConv1D(filters=32)(x)
     x = ResidualConv1D(filters=32)(x)
 
-    x = ResidualConv1D(filters=64, pool=True, spatial_dropout=True)(x)
+    x = ResidualConv1D(filters=64, pool=True, spatial_dropout=0.3)(x)
     x = ResidualConv1D(filters=64)(x)
     x = ResidualConv1D(filters=64)(x)
 
-    x = ResidualConv1D(filters=128, pool=True, spatial_dropout=True)(x)
+    x = ResidualConv1D(filters=128, pool=True, spatial_dropout=0.3)(x)
     x = ResidualConv1D(filters=128)(x)
     x = ResidualConv1D(filters=128)(x)
 
-    x = ResidualConv1D(filters=256, pool=True, spatial_dropout=True)(x)
+    x = ResidualConv1D(filters=256, pool=True, spatial_dropout=0.3)(x)
     x = ResidualConv1D(filters=256)(x)
     x = ResidualConv1D(filters=256)(x)
 
