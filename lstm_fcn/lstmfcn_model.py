@@ -195,28 +195,27 @@ def create_model(google_colab, n_features):
     x = Activation("relu")(x)
 
     # residual net part
-    x = ResidualConv1D(filters=32, pool=True)(x)
+    x = ResidualConv1D(filters=32, pool=True, spatial_dropout=True)(x)
     x = ResidualConv1D(filters=32)(x)
     x = ResidualConv1D(filters=32)(x)
 
-    x = ResidualConv1D(filters=64, pool=True)(x)
+    x = ResidualConv1D(filters=64, pool=True, spatial_dropout=True)(x)
     x = ResidualConv1D(filters=64)(x)
     x = ResidualConv1D(filters=64)(x)
 
-    # x = ResidualConv1D(filters=128, pool=True)(x)
-    # x = ResidualConv1D(filters=128)(x)
-    # x = ResidualConv1D(filters=128)(x)
-    #
-    # x = ResidualConv1D(filters=256, pool=True)(x)
-    # x = ResidualConv1D(filters=256)(x)
-    # x = ResidualConv1D(filters=256)(x)
+    x = ResidualConv1D(filters=128, pool=True, spatial_dropout=True)(x)
+    x = ResidualConv1D(filters=128)(x)
+    x = ResidualConv1D(filters=128)(x)
+
+    x = ResidualConv1D(filters=256, pool=True, spatial_dropout=True)(x)
+    x = ResidualConv1D(filters=256)(x)
+    x = ResidualConv1D(filters=256)(x)
 
     x = BatchNormalization()(x)
     x = Activation("relu")(x)
-    x = Activation("relu")(x)
     x = AveragePooling1D(1, padding="same")(x)
 
-    x = Bidirectional(LSTM_(32, return_sequences=False))(x)
+    x = Bidirectional(LSTM_(32, return_sequences=True))(x)
     final = Dropout(0.4)(x)
 
     outputs = Dense(2, activation="softmax")(final)
