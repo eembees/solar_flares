@@ -216,9 +216,9 @@ def create_model(google_colab, n_features):
     x = AveragePooling1D(1, padding="same")(x)
 
     x = Bidirectional(LSTM_(32, return_sequences=False))(x) # Should be FALSE because we don't care about each data pt
-    final = Dropout(0.4)(x)
+    x = Dropout(0.4)(x)
 
-    outputs = Dense(2, activation="softmax")(final)
+    outputs = Dense(2, activation="softmax")(x)
 
     model = keras.models.Model(inputs=inputs, outputs=outputs)
     optimizer = 'adam'

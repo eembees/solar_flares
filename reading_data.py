@@ -5,6 +5,7 @@ import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 from json import JSONDecoder, JSONDecodeError  # for reading the JSON data files
 import re  # for regular expressions
 import os  # for os related operations
+from sklearn.preprocessing import maxabs_scale
 
 
 def decode_obj(line, pos=0, decoder=JSONDecoder()):
@@ -148,6 +149,21 @@ def load_npz_file(path: Path):
 def save_y_preds(y_index: np.ndarray, y_pred: np.ndarray, fo: Path):
     np.savez(fo, index=y_index, labels=y_pred)
     pass
+
+
+def preprocess_data(X, scaler=maxabs_scale):
+    shap = X.shape
+    # print(shap[1:])
+    if shap[1:] != (60, 25):
+        raise ValueError('Data shape wrong')
+    for i, x_i in enumerate(X):
+        x_i_t = np.zeros_like(x_i.transpose())
+        for j, series in enumerate(x_i.transpose()):
+            series = scaler(series)
+            x_i_t[j] = series
+        X[i] = x_i_t.transpose()
+    return X
+
 
 
 if __name__ == '__main__':
