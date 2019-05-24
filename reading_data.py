@@ -165,6 +165,21 @@ def preprocess_data(X, scaler=maxabs_scale):
 
 
 
+def preprocess_data(X, scaler=maxabs_scale):
+    shap = X.shape
+    # print(shap[1:])
+    if shap[1:] != (60, 25):
+        raise ValueError('Data shape wrong')
+    for i, x_i in enumerate(X):
+        x_i_t = np.zeros_like(x_i.transpose())
+        for j, series in enumerate(x_i.transpose()):
+            series = scaler(series)
+            x_i_t[j] = series
+        X[i] = x_i_t.transpose()
+    return X
+
+
+
 if __name__ == '__main__':
     data_dir = Path('./input')
     out_dir = data_dir / 'npz'

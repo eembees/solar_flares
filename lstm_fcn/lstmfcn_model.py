@@ -25,13 +25,47 @@ else:
     config = tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)
     keras.backend.set_session(tf.Session(config=config))
 
-
-# loss function
-# https://www.kaggle.com/rejpalcz/best-loss-function-for-f1-score-metric
-
-
 from keras.callbacks import Callback
 from sklearn.metrics import f1_score, precision_score, recall_score
+
+
+class ResidualConv1D:
+    """
+    ***ResidualConv1D for use with best performing classifier***
+    """
+
+    def __init__(self, filters, kernel_size=3, pool=False, spatial_dropout=False):
+        self.filters = filters
+        self.pool = pool
+        self.kernel_size = kernel_size
+        self.spatial_dropout = spatial_dropout
+
+    def build(self, x):
+        res = x
+        if self.pool:
+            x = AveragePooling1D(1, padding="same")(x)
+            res = Conv1D(filters=self.filters, kernel_size=1, strides=1, padding="same",
+                         kernel_initializer="he_uniform")(res)
+
+        out = BatchNormalization()(x)
+        out = Activation("relu")(out)
+        out = Conv1D(filters=self.filters, kernel_size=self.kernel_size, strides=1, padding="same",
+                     kernel_initializer="he_uniform")(out)
+
+        if self.spatial_dropout:
+            out = SpatialDropout1D(self.spatial_dropout)(out)
+
+        out = BatchNormalization()(out)
+        out = Activation("relu")(out)
+        out = Conv1D(filters=self.filters, kernel_size=self.kernel_size, strides=1, padding="same",
+                     kernel_initializer="he_uniform")(out)
+
+        out = keras.layers.add([res, out])
+
+        return out
+
+    def __call__(self, x):
+        return self.build(x)
 
 
 class Metrics(Callback):
@@ -39,7 +73,6 @@ class Metrics(Callback):
         self.val_f1s = []
         self.val_recalls = []
         self.val_precisions = []
-
 
     def on_epoch_end(self, epoch, logs={}):
         val_predict = (np.asarray(self.model.predict(self.validation_data[0]))).round()
@@ -50,12 +83,14 @@ class Metrics(Callback):
         self.val_f1s.append(_val_f1)
         self.val_recalls.append(_val_recall)
         self.val_precisions.append(_val_precision)
-        print(" — val_f1: {:.3f} — val_precision: {:.3f} — val_recall {:.3f}".format(_val_f1, _val_precision, _val_recall))
+        print(" — val_f1: {:.3f} — val_precision: {:.3f} — val_recall {:.3f}".format(_val_f1, _val_precision,
+                                                                                     _val_recall))
         return
 
 
-
 def f1(y_true, y_pred):
+    # loss function
+    # https://www.kaggle.com/rejpalcz/best-loss-function-for-f1-score-metric
     y_pred = K.round(y_pred)
     tp = K.sum(K.cast(y_true * y_pred, 'float'), axis=0)
     tn = K.sum(K.cast((1 - y_true) * (1 - y_pred), 'float'), axis=0)
@@ -155,42 +190,38 @@ def create_model(google_colab, n_features):
 
     inputs = Input(shape=(None, n_features))  # Allow for time series that are shorter than 60
 
-    y = Conv1D(filters=128, kernel_size=8, padding="same", kernel_initializer="he_uniform")(inputs)
-    y = BatchNormalization()(y)
-    y = Activation("relu")(y)
-    y = SpatialDropout1D(rate=0.3)(y)
+    x = Conv1D(filters=32, kernel_size=3, padding="same", kernel_initializer="he_uniform")(inputs)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
 
-    y = Conv1D(filters=256, kernel_size=5, padding="same", kernel_initializer="he_uniform")(y)
-    y = BatchNormalization()(y)
-    y = Activation("relu")(y)
-    y = SpatialDropout1D(rate=0.3)(y)
+    # residual net part
+    x = ResidualConv1D(filters=32, pool=True, spatial_dropout=0.3)(x)
+    x = ResidualConv1D(filters=32)(x)
+    x = ResidualConv1D(filters=32)(x)
 
-    y = Conv1D(filters=128, kernel_size=3, padding="same", kernel_initializer="he_uniform")(y)
-    y = BatchNormalization()(y)
-    y = Activation("relu")(y)
-    y = SpatialDropout1D(rate=0.3)(y)
+    x = ResidualConv1D(filters=64, pool=True, spatial_dropout=0.3)(x)
+    x = ResidualConv1D(filters=64)(x)
+    x = ResidualConv1D(filters=64)(x)
 
-    y = AveragePooling1D(1, padding="same")(y)
-    # y = GlobalMaxPool1D()(y)
+    x = ResidualConv1D(filters=128, pool=True, spatial_dropout=0.3)(x)
+    x = ResidualConv1D(filters=128)(x)
+    x = ResidualConv1D(filters=128)(x)
 
-    y = Bidirectional(LSTM_(8, return_sequences=False))(y)
-    y = Dropout(0.4)(y)
+    x = ResidualConv1D(filters=256, pool=True, spatial_dropout=0.3)(x)
+    x = ResidualConv1D(filters=256)(x)
+    x = ResidualConv1D(filters=256)(x)
 
-    x = AveragePooling1D(strides=1, padding="same")(inputs)
-    x = Bidirectional(LSTM_(8, return_sequences=False))(x)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
+    x = AveragePooling1D(1, padding="same")(x)
+
+    x = Bidirectional(LSTM_(32, return_sequences=False))(x) # Should be FALSE because we don't care about each data pt
     x = Dropout(0.4)(x)
 
-    final = Concatenate()([x, y])
-
-    # final = Lambda(lambda x: x / 0.5)(final)
-    outputs = Dense(2, activation="softmax")(final)
-    # outputs = Dense(2)(final)
+    outputs = Dense(2, activation="softmax")(x)
 
     model = keras.models.Model(inputs=inputs, outputs=outputs)
-    # optimizer = keras.optimizers.rmsprop(lr=1e-3)
     optimizer = 'adam'
-    # model.compile(loss=f1_loss, optimizer=optimizer, metrics=["accuracy"])
-    # model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     return model
 
