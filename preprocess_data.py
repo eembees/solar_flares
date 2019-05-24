@@ -19,15 +19,17 @@ def preprocess_data(X, scaler=maxabs_scale):
 
 if __name__ == '__main__':
     from pathlib import Path
-    from reading_data import load_npz_file
+    from reading_data import *
 
     inp = Path('./input/npz/')
-    filenames = inp.glob('small.npz')
+    filenames = inp.glob('*3Training.npz')
 
     for fp in filenames:
+        print('Now treating file: ')
+        print(fp.name)
+        fpo = Path(str(fp).replace('.npz', '_processed.npz'))
         X, y = load_npz_file(fp)
-        print(X[0, 0])
         X = preprocess_data(X)
-        print(X[0, 0])
-
-        exit()
+        ids = np.arange(1, len(y) + 1, dtype=int)
+        np.savez(fpo, data=X, labels=y, index=ids)
+        X, y = None, None
