@@ -132,7 +132,7 @@ def save_arr_to_npz(arr: np.ndarray, labels: np.ndarray, ids: np.ndarray, fo: Pa
     pass
 
 
-def load_npz_file(path: Path):
+def load_npz_file(path: Path, return_ids = False):
     a = np.load(path)
 
     X = a['data']
@@ -143,7 +143,17 @@ def load_npz_file(path: Path):
     except ValueError:
         y = None
 
-    return X, y
+    if return_ids:
+        try:
+            ids = a['ids']
+        except KeyError:
+            ids = None
+        except ValueError:
+            ids = None
+
+        return X, y, ids
+    else:
+        return X, y
 
 
 def save_y_preds(y_index: np.ndarray, y_pred: np.ndarray, fo: Path):
@@ -181,12 +191,11 @@ def preprocess_data(X, scaler=maxabs_scale):
 
 
 if __name__ == '__main__':
-    data_dir = Path('./input')
-    out_dir = data_dir / 'npz'
+    data_dir = Path('/Users/mag/PycharmProjects/solar_flares/input/')
+    out_dir = Path('./input/npz')
 
-    file_paths = list(data_dir.glob('*2*.json'))
+    file_paths = list(data_dir.glob('*testSet.json'))
     print(file_paths)
-
     for fp in file_paths:
         fo = out_dir / fp.with_suffix('.npz').name
         all_df, labels, ids = read_json_data_to_arr(fp)

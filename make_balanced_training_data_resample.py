@@ -1,12 +1,35 @@
+import numpy as np
+def makeNewSequenceWithNoise(X_i:np.ndarray, n_frames = 5, noise_frac = 0.3):
+    # X_i is shape 60, 25
+
+    X = X_i.transpose()
+
+    X_new = np.zeros_like(X)
+
+    for i, seq in enumerate(X):
+        noise = np.std(seq[:n_frames])
+        if noise is 0: # from all nan slices being converted to 0
+            seq_new = seq
+        else:
+            seq_new = seq + np.random.normal(loc=0.0, scale=noise * noise_frac, size=len(seq))
+
+        X_new[i] = seq_new
+
+    return X_new.transpose()
+
+
+
+
+
 if __name__ == '__main__':
     from pathlib import Path
     from reading_data import *
     from sklearn.utils import resample
-
+    import matplotlib.pyplot as plt
     inp = Path('./input/npz/')
-    filenames = inp.glob('*Training_processed.npz')
+    filenames = inp.glob('fold3Trainin*.npz')
 
-    filenames = [f for f in filenames if '3' not in str(f)] # use fold 3 for validation
+    filenames = [f for f in filenames if 'proc' not in str(f)] # use fold 3 for validation
 
     fpo = inp.joinpath('fold1-2Training_balanced_big.npz')
 
@@ -36,12 +59,20 @@ if __name__ == '__main__':
     print(X_0.shape)
     print(X_1.shape)
 
+    for x in X_1:
+        plt.plot(x[:,0])
+        print(x[:,0])
+        x = makeNewSequenceWithNoise(x)
+        print(x[:,0])
+        plt.plot(x[:,0])
+        plt.show()
+        exit()
+
 
     n_0 = X_0.shape[0]
     n_1 = X_1.shape[0]
 
     n   = max(n_0, n_1)
-
 
     ## Make the dataset 50/50 split
 

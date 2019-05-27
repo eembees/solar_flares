@@ -22,14 +22,13 @@ if __name__ == '__main__':
     from reading_data import *
 
     inp = Path('./input/npz/')
-    filenames = inp.glob('*3Training.npz')
+    filenames = inp.glob('*testSet.npz')
 
     for fp in filenames:
         print('Now treating file: ')
         print(fp.name)
         fpo = Path(str(fp).replace('.npz', '_processed.npz'))
-        X, y = load_npz_file(fp)
+        X, y, ids = load_npz_file(fp, return_ids=True)
         X = preprocess_data(X)
-        ids = np.arange(1, len(y) + 1, dtype=int)
         np.savez(fpo, data=X, labels=y, index=ids)
         X, y = None, None

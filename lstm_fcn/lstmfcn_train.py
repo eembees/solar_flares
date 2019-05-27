@@ -23,7 +23,7 @@ if __name__ == "__main__":
     EPOCHS = 10
     PERCENTAGE = 100
     BATCH_SIZE = 128
-    CALLBACK_TIMEOUT = 15
+    CALLBACK_TIMEOUT = 5
     N_TIMESTEPS = 60  # Change if Variable length
     INCLUDE_E = True
     INCLUDE_S = True

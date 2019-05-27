@@ -4,7 +4,7 @@ if __name__ == '__main__':
     data_dir = Path('./input')
     out_dir = data_dir / 'npz'
 
-    file_paths = list(out_dir.glob('*Training.npz'))
+    file_paths = list(out_dir.glob('*Training*.npz'))
     print(file_paths)
 
     for fp in file_paths:
