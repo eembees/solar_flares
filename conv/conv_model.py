@@ -189,19 +189,12 @@ def create_model(google_colab, n_features):
     """Creates Keras model"""
 
     inputs = Input(shape=(60, n_features))  # Allow for time series that are shorter than 60
-    y = Conv1D(filters=256, kernel_size=8, padding="same", kernel_initializer="he_uniform")(inputs)
+    y = Conv1D(filters=128, kernel_size=8, padding="same", kernel_initializer="he_uniform")(inputs)
     y = BatchNormalization()(y)
     y = Activation("relu")(y)
     y = SpatialDropout1D(rate=0.3)(y)
 
     y = MaxPool1D(pool_size=4, padding='same')(y) # now the array should be 15 x 256
-
-    y = Conv1D(filters=128, kernel_size=4, padding="same", kernel_initializer="he_uniform")(y)
-    y = BatchNormalization()(y)
-    y = Activation("relu")(y)
-    y = SpatialDropout1D(rate=0.3)(y)
-
-    y = MaxPool1D(pool_size=3, padding='same')(y) # now it should be a 5x128 array
 
     y = Conv1D(filters=64, kernel_size=2, padding="same", kernel_initializer="he_uniform")(y)
     y = BatchNormalization()(y)
