@@ -13,84 +13,24 @@ import matplotlib.ticker
 from matplotlib import pyplot as plt
 import os.path
 from sklearn.preprocessing import StandardScaler
-from send2trash import send2trash
+
 
 GOOGLE_COLAB = "google.colab" in sys.modules
 if GOOGLE_COLAB:
-    sys.path.append("./gdrive/My Drive/Colab Notebooks/solar_flares")
+    sys.path.append("./gdrive/My Drive/Colab Notebooks/FRETML")
     plt.style.use("default")
-#     config = tf.ConfigProto(device_count={"GPU": 1})
-#     keras.backend.set_session(tf.Session(config=config))
-# else:
-#     config = tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)
-#     keras.backend.set_session(tf.Session(config=config))
-
-from keras.callbacks import Callback
-from sklearn.metrics import f1_score, precision_score, recall_score
+    config = tf.ConfigProto(device_count={"GPU": 1})
+    keras.backend.set_session(tf.Session(config=config))
+else:
+    config = tf.ConfigProto(intra_op_parallelism_threads=8, inter_op_parallelism_threads=8)
+    keras.backend.set_session(tf.Session(config=config))
 
 
-class ResidualConv1D:
-    """
-    ***ResidualConv1D for use with best performing classifier***
-    """
-
-    def __init__(self, filters, kernel_size=3, pool=False, spatial_dropout=False):
-        self.filters = filters
-        self.pool = pool
-        self.kernel_size = kernel_size
-        self.spatial_dropout = spatial_dropout
-
-    def build(self, x):
-        res = x
-        if self.pool:
-            x = AveragePooling1D(1, padding="same")(x)
-            res = Conv1D(filters=self.filters, kernel_size=1, strides=1, padding="same",
-                         kernel_initializer="he_uniform")(res)
-
-        out = BatchNormalization()(x)
-        out = Activation("relu")(out)
-        out = Conv1D(filters=self.filters, kernel_size=self.kernel_size, strides=1, padding="same",
-                     kernel_initializer="he_uniform")(out)
-
-        if self.spatial_dropout:
-            out = SpatialDropout1D(self.spatial_dropout)(out)
-
-        out = BatchNormalization()(out)
-        out = Activation("relu")(out)
-        out = Conv1D(filters=self.filters, kernel_size=self.kernel_size, strides=1, padding="same",
-                     kernel_initializer="he_uniform")(out)
-
-        out = keras.layers.add([res, out])
-
-        return out
-
-    def __call__(self, x):
-        return self.build(x)
-
-
-class Metrics(Callback):
-    def on_train_begin(self, logs={}):
-        self.val_f1s = []
-        self.val_recalls = []
-        self.val_precisions = []
-
-    def on_epoch_end(self, epoch, logs={}):
-        val_predict = (np.asarray(self.model.predict(self.validation_data[0]))).round()
-        val_targ = self.validation_data[1]
-        _val_f1 = f1_score(val_targ, val_predict)
-        _val_recall = recall_score(val_targ, val_predict)
-        _val_precision = precision_score(val_targ, val_predict)
-        self.val_f1s.append(_val_f1)
-        self.val_recalls.append(_val_recall)
-        self.val_precisions.append(_val_precision)
-        print(" — val_f1: {:.3f} — val_precision: {:.3f} — val_recall {:.3f}".format(_val_f1, _val_precision,
-                                                                                     _val_recall))
-        return
+# loss function
+# https://www.kaggle.com/rejpalcz/best-loss-function-for-f1-score-metric
 
 
 def f1(y_true, y_pred):
-    # loss function
-    # https://www.kaggle.com/rejpalcz/best-loss-function-for-f1-score-metric
     y_pred = K.round(y_pred)
     tp = K.sum(K.cast(y_true * y_pred, 'float'), axis=0)
     tn = K.sum(K.cast((1 - y_true) * (1 - y_pred), 'float'), axis=0)
@@ -180,8 +120,7 @@ def gpu_model_to_cpu(trained_gpu_model, untrained_cpu_model, outdir, modelname):
         send2trash(weights)
     except OSError:
         warn("Didn't trash file (probably because of Google Drive)", RuntimeWarning)
-    except NameError:
-        warn("Didn't trash file (probably because of Google Drive)", RuntimeWarning)
+
 
 def create_model(google_colab, n_features):
     """Creates Keras model"""
@@ -204,24 +143,74 @@ def create_model(google_colab, n_features):
     y = Activation("relu")(y)
     y = SpatialDropout1D(rate=0.3)(y)
 
-    y = GlobalMaxPool1D()(y)
-    x = GlobalMaxPool1D()(inputs)
+    y = AveragePooling1D(1, padding="same")(y)
+    # y = GlobalMaxPool1D()(y)
 
+    y = Bidirectional(LSTM_(8, return_sequences=False))(y)
+    y = Dropout(0.4)(y)
+
+    x = AveragePooling1D(strides=1, padding="same")(inputs)
     x = Bidirectional(LSTM_(8, return_sequences=False))(x)
     x = Dropout(0.4)(x)
 
     final = Concatenate()([x, y])
 
-    final = Lambda(lambda x: x / 0.5)(final)
+    # final = Lambda(lambda x: x / 0.5)(final)
     outputs = Dense(2, activation="softmax")(final)
+    # outputs = Dense(2)(final)
 
     model = keras.models.Model(inputs=inputs, outputs=outputs)
     # optimizer = keras.optimizers.rmsprop(lr=1e-3)
     optimizer = 'adam'
     # model.compile(loss=f1_loss, optimizer=optimizer, metrics=["accuracy"])
+    # model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
-    # model.compile(loss="categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     return model
+
+
+# def create_model(google_colab, n_features):
+#     """Creates Keras model"""
+#     LSTM_ = CuDNNLSTM if google_colab else LSTM
+#
+#     inputs = Input(shape=(None, n_features))  # Allow for time series that are shorter than 60
+#
+#     y = Conv1D(filters=128, kernel_size=8, padding="same", kernel_initializer="he_uniform")(inputs)
+#     y = BatchNormalization()(y)
+#     y = Activation("relu")(y)
+#     y = SpatialDropout1D(rate=0.3)(y)
+#
+#     y = Conv1D(filters=256, kernel_size=5, padding="same", kernel_initializer="he_uniform")(y)
+#     y = BatchNormalization()(y)
+#     y = Activation("relu")(y)
+#     y = SpatialDropout1D(rate=0.3)(y)
+#
+#     y = Conv1D(filters=128, kernel_size=3, padding="same", kernel_initializer="he_uniform")(y)
+#     y = BatchNormalization()(y)
+#     y = Activation("relu")(y)
+#     y = SpatialDropout1D(rate=0.3)(y)
+#
+#     y = AveragePooling1D(1, padding="same")(y)
+#     # y = GlobalMaxPool1D()(y)
+#
+#     y = Bidirectional(LSTM_(8, return_sequences=False))(y)
+#     y = Dropout(0.4)(y)
+#
+#     x = AveragePooling1D(strides=1, padding="same")(inputs)
+#     x = Bidirectional(LSTM_(8, return_sequences=False))(x)
+#     x = Dropout(0.4)(x)
+#
+#     final = Concatenate()([x, y])
+#
+#     final = Lambda(lambda x: x / 0.5)(final)
+#     outputs = Dense(2, activation="softmax")(final)
+#
+#     model = keras.models.Model(inputs=inputs, outputs=outputs)
+#     optimizer = keras.optimizers.rmsprop(lr=1e-3)
+#     # optimizer = 'adam'
+#     # model.compile(loss=f1_loss, optimizer=optimizer, metrics=["accuracy"])
+#     model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+#     # model.compile(loss="categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+#     return model
 
 
 def get_model(n_features, train, new_model, model_name, model_path, google_colab, print_summary=True):
