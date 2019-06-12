@@ -27,11 +27,12 @@ if __name__ == '__main__':
     from sklearn.utils import resample
     import matplotlib.pyplot as plt
     inp = Path('./input/npz/')
-    filenames = inp.glob('fold3Trainin*.npz')
+    filenames = inp.glob('fold?Training.npz')
 
-    filenames = [f for f in filenames if 'proc' not in str(f)] # use fold 3 for validation
+    filenames = [f for f in filenames if '3' not in str(f)] # use fold 3 for validation
 
-    fpo = inp.joinpath('fold1-2Training_balanced_big.npz')
+
+    fpo = inp.joinpath('fold1-2Training_balanced.npz')
 
     Xs = []
     ys = []
@@ -59,25 +60,27 @@ if __name__ == '__main__':
     print(X_0.shape)
     print(X_1.shape)
 
-    for x in X_1:
-        plt.plot(x[:,0])
-        print(x[:,0])
-        x = makeNewSequenceWithNoise(x)
-        print(x[:,0])
-        plt.plot(x[:,0])
-        plt.show()
-        exit()
+
+    # TODO make this again so that we have more data to train on
+    # for x in X_1:
+    #     plt.plot(x[:,0])
+    #     print(x[:,0])
+    #     x = makeNewSequenceWithNoise(x)
+    #     print(x[:,0])
+    #     plt.plot(x[:,0])
+    #     plt.show()
+    #     exit()
 
 
     n_0 = X_0.shape[0]
     n_1 = X_1.shape[0]
 
-    n   = max(n_0, n_1)
+    n   = min(n_0, n_1)
 
     ## Make the dataset 50/50 split
 
     X_0_new = resample(X_0, n_samples=n, replace=False)
-    X_1_new = resample(X_1, n_samples=n, replace=True) # this is to make it bigger
+    X_1_new = resample(X_1, n_samples=n, replace=False) # this is to make it bigger
 
     y_0_new = np.zeros(n, dtype=int)
     y_1_new = np.ones(n, dtype=int)

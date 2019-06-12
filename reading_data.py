@@ -81,6 +81,7 @@ def read_json_data_to_df(file_path: Path):
     df.set_index([pd.Index(ids)])
     # Uncomment if you want to save this as CSV
     # df.to_csv(file_name + '_last_vals.csv', index=False)
+
     return df
 
 
@@ -99,16 +100,22 @@ def read_json_data_to_arr(file_path: Path):
         for line in infile:  # Each 'line' is one MVTS with its single label (0 or 1).
             obj = get_obj_with_all(line)
             # if obj['id'] < 100:
-            df = obj['values']
-            df = df.fillna(method='ffill')
-            df = df.fillna(method='bfill')
-            df = df.fillna(0.0) # after padding, give up
+            df = obj['values'].sort_index()
+            # remove anything 2 std dev from the mean
+            df = df.mask(df.sub(df.mean()).div(df.std()).abs().gt(2))
+            # do interpolation of variables
+
+            df = df.interpolate(method='linear', extrapolate=False)
+
+            df = df.fillna(method='ffill').fillna(method='bfill').fillna(0.0)
+
+
+
 
             all_df.append(df.values)
             labels.append(obj['classType'])
             ids.append(obj['id'])
-            # else:
-            #     break
+
 
     all_df = np.array(all_df)
     labels = np.array(labels)
@@ -136,6 +143,11 @@ def load_npz_file(path: Path, return_ids = False):
     a = np.load(path)
 
     X = a['data']
+
+    if np.any(np.isnan(X)):
+        X = np.nan_to_num(X)
+
+
     try:
         y = a['labels']
     except KeyError:
@@ -160,19 +172,6 @@ def save_y_preds(y_index: np.ndarray, y_pred: np.ndarray, fo: Path):
     np.savez(fo, index=y_index, labels=y_pred)
     pass
 
-def preprocess_data(X, scaler=maxabs_scale):
-    shap = X.shape
-    # print(shap[1:])
-    if shap[1:] != (60, 25):
-        raise ValueError('Data shape wrong')
-    for i, x_i in enumerate(X):
-        x_i_t = np.zeros_like(x_i.transpose())
-        for j, series in enumerate(x_i.transpose()):
-            series = scaler(series)
-            x_i_t[j] = series
-        X[i] = x_i_t.transpose()
-    return X
-
 
 
 def preprocess_data(X, scaler=maxabs_scale):
@@ -192,11 +191,13 @@ def preprocess_data(X, scaler=maxabs_scale):
 
 if __name__ == '__main__':
     data_dir = Path('/Users/mag/PycharmProjects/solar_flares/input/')
-    out_dir = Path('./input/npz')
+    out_dir = Path('/Users/mag/PycharmProjects/solar_flares/input/npz')
+    # out_dir = Path('./input/npz')
 
-    file_paths = list(data_dir.glob('*testSet.json'))
+    file_paths = list(data_dir.glob('test*.json'))
     print(file_paths)
     for fp in file_paths:
         fo = out_dir / fp.with_suffix('.npz').name
         all_df, labels, ids = read_json_data_to_arr(fp)
+
         save_arr_to_npz(all_df, labels, ids, fo)

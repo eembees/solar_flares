@@ -183,45 +183,57 @@ def gpu_model_to_cpu(trained_gpu_model, untrained_cpu_model, outdir, modelname):
     except NameError:
         warn("Didn't trash file (probably because of Google Drive)", RuntimeWarning)
 
+
 def create_model(google_colab, n_features):
     """Creates Keras model"""
     LSTM_ = CuDNNLSTM if google_colab else LSTM
 
-    inputs = Input(shape=(None, n_features))  # Allow for time series that are shorter than 60
+    inputs = Input(shape=(None, n_features))
 
-    y = Conv1D(filters=128, kernel_size=8, padding="same", kernel_initializer="he_uniform")(inputs)
-    y = BatchNormalization()(y)
-    y = Activation("relu")(y)
-    y = SpatialDropout1D(rate=0.3)(y)
+    x = Conv1D(
+        filters=32,
+        kernel_size=16,
+        padding="same",
+        kernel_initializer="he_uniform",
+    )(inputs)
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
 
-    y = Conv1D(filters=256, kernel_size=5, padding="same", kernel_initializer="he_uniform")(y)
-    y = BatchNormalization()(y)
-    y = Activation("relu")(y)
-    y = SpatialDropout1D(rate=0.3)(y)
+    # residual net part
+    x = ResidualConv1D(filters=32, kernel_size=16, pool=True)(x)
+    x = ResidualConv1D(filters=32, kernel_size=16)(x)
+    x = ResidualConv1D(filters=32, kernel_size=16)(x)
 
-    y = Conv1D(filters=128, kernel_size=3, padding="same", kernel_initializer="he_uniform")(y)
-    y = BatchNormalization()(y)
-    y = Activation("relu")(y)
-    y = SpatialDropout1D(rate=0.3)(y)
+    x = ResidualConv1D(filters=64, kernel_size=12, pool=True)(x)
+    x = ResidualConv1D(filters=64, kernel_size=12)(x)
+    x = ResidualConv1D(filters=64, kernel_size=12)(x)
 
-    y = GlobalMaxPool1D()(y)
-    x = GlobalMaxPool1D()(inputs)
+    x = ResidualConv1D(filters=128, kernel_size=8, pool=True)(x)
+    x = ResidualConv1D(filters=128, kernel_size=8)(x)
+    x = ResidualConv1D(filters=128, kernel_size=8)(x)
 
-    x = Bidirectional(LSTM_(8, return_sequences=False))(x)
-    x = Dropout(0.4)(x)
+    x = ResidualConv1D(filters=256, kernel_size=4, pool=True)(x)
+    x = ResidualConv1D(filters=256, kernel_size=4)(x)
+    x = ResidualConv1D(filters=256, kernel_size=4)(x)
 
-    final = Concatenate()([x, y])
+    x = BatchNormalization()(x)
+    x = Activation("relu")(x)
+    x = MaxPooling1D(1, padding="same")(x)
 
-    final = Lambda(lambda x: x / 0.5)(final)
-    outputs = Dense(2, activation="softmax")(final)
+    x = Bidirectional(LSTM_(16, return_sequences=False))(x)
+    final = Dropout(rate=0.4)(x)
 
+    activation = "relu"
+    loss = "binary_crossentropy"
+    acc = "accuracy"
+
+    outputs = Dense(2, activation=activation)(final)
+    optimizer = keras.optimizers.sgd(lr=0.1, momentum=0.8, nesterov=True)
     model = keras.models.Model(inputs=inputs, outputs=outputs)
-    # optimizer = keras.optimizers.rmsprop(lr=1e-3)
-    optimizer = 'adam'
-    # model.compile(loss=f1_loss, optimizer=optimizer, metrics=["accuracy"])
-    model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
-    # model.compile(loss="categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
+    model.compile(loss=loss, optimizer=optimizer, metrics=[acc])
+
     return model
+
 
 
 def get_model(n_features, train, new_model, model_name, model_path, google_colab, print_summary=True):

@@ -183,44 +183,55 @@ def gpu_model_to_cpu(trained_gpu_model, untrained_cpu_model, outdir, modelname):
     except NameError:
         warn("Didn't trash file (probably because of Google Drive)", RuntimeWarning)
 
+
+
 def create_model(google_colab, n_features):
     """Creates Keras model"""
-    LSTM_ = CuDNNLSTM if google_colab else LSTM
 
-    inputs = Input(shape=(None, n_features))  # Allow for time series that are shorter than 60
-
-    y = Conv1D(filters=128, kernel_size=8, padding="same", kernel_initializer="he_uniform")(inputs)
+    inputs = Input(shape=(60, n_features))  # Allow for time series that are shorter than 60
+    y = Conv1D(filters=256, kernel_size=8, padding="same", kernel_initializer="he_uniform")(inputs)
     y = BatchNormalization()(y)
     y = Activation("relu")(y)
     y = SpatialDropout1D(rate=0.3)(y)
 
-    y = Conv1D(filters=256, kernel_size=5, padding="same", kernel_initializer="he_uniform")(y)
+    y = MaxPool1D(pool_size=4, padding='same')(y) # now the array should be 15 x 256
+
+    y = Conv1D(filters=128, kernel_size=4, padding="same", kernel_initializer="he_uniform")(y)
     y = BatchNormalization()(y)
     y = Activation("relu")(y)
     y = SpatialDropout1D(rate=0.3)(y)
 
-    y = Conv1D(filters=128, kernel_size=3, padding="same", kernel_initializer="he_uniform")(y)
+    y = MaxPool1D(pool_size=3, padding='same')(y) # now it should be a 5x128 array
+
+    y = Conv1D(filters=64, kernel_size=2, padding="same", kernel_initializer="he_uniform")(y)
     y = BatchNormalization()(y)
     y = Activation("relu")(y)
     y = SpatialDropout1D(rate=0.3)(y)
 
-    y = GlobalMaxPool1D()(y)
-    x = GlobalMaxPool1D()(inputs)
+    y = MaxPool1D(pool_size=3, padding='valid')(y) # shape should be 3 x 64
 
-    x = Bidirectional(LSTM_(8, return_sequences=False))(x)
-    x = Dropout(0.4)(x)
 
-    final = Concatenate()([x, y])
+    # y = GlobalMaxPool1D()(y)
 
-    final = Lambda(lambda x: x / 0.5)(final)
+    final = Dense(128, activation="softmax")(y)
+    final = Dropout(rate=0.4)(final)
+
+    final = Dense(64, activation="softmax")(final)
+    final = Dropout(rate=0.4)(final)
+
+    final = Dense(16, activation="softmax")(final)
+    final = Dropout(rate=0.4)(final)
+
+    final = Flatten()(final)
+
     outputs = Dense(2, activation="softmax")(final)
 
     model = keras.models.Model(inputs=inputs, outputs=outputs)
-    # optimizer = keras.optimizers.rmsprop(lr=1e-3)
-    optimizer = 'adam'
-    # model.compile(loss=f1_loss, optimizer=optimizer, metrics=["accuracy"])
+
+
+    optimizer = keras.optimizers.rmsprop(lr=1e-3)
+    # optimizer = 'adam'
     model.compile(loss="binary_crossentropy", optimizer=optimizer, metrics=["accuracy"])
-    # model.compile(loss="categorical_crossentropy", optimizer=optimizer, metrics=["accuracy"])
     return model
 
 

@@ -22,7 +22,9 @@ if __name__ == '__main__':
     from reading_data import *
 
     inp = Path('./input/npz/')
-    filenames = inp.glob('*testSet.npz')
+    filenames = inp.glob('*.npz')
+
+    filenames = [f for f in filenames if 'ed' not in str(f)]
 
     for fp in filenames:
         print('Now treating file: ')
